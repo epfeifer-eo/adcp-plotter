@@ -3,7 +3,10 @@ from PyQt5.QtWidgets import QFileDialog
 from backend.data_parsing import load_json
 
 def load_files(gui):
-    files, _ = QFileDialog.getOpenFileNames(gui, "Select Files", "./data", "JSON Files (*.json)")
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    data_folder = os.path.join(project_root, 'data')
+    files, _ = QFileDialog.getOpenFileNames(gui, "Select Files", data_folder, "JSON Files (*.json)")
+
     if files:
         for file in files:
             file_name = os.path.basename(file)
