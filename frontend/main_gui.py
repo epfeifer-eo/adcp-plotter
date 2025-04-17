@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter
+    QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter, QTabWidget, QWidget
 )
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -16,10 +16,11 @@ class ADCPlotterGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ADCP Plotter")
-        self.setGeometry(100, 100, 1000, 600)
+        self.setGeometry(100, 100, 1200, 700)
         self.file_paths = {}
         self.parsed_data = {}
-        self.metadata_keys_to_plot = ['altitude', 'vwc', 'unit_number']  # Add fields to plot here
+        self.metadata_keys_to_plot = []
+        self.active_metadata_tab = 'latlong'  # default tab
 
         self.layout = QHBoxLayout()
         self.splitter = QSplitter(Qt.Horizontal)
@@ -62,23 +63,53 @@ class ADCPlotterGUI(QWidget):
         center_widget = QWidget()
         center_widget.setLayout(self.center_panel)
 
-        # Right panel (plot only)
+        # Right panel
         self.right_panel = QVBoxLayout()
-        self.figure = Figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.canvas.setMinimumHeight(300)
-        self.canvas.setMinimumWidth(600)
-        self.right_panel.addWidget(self.canvas)
+        self.profile_figure = Figure()
+        self.profile_canvas = FigureCanvas(self.profile_figure)
+        self.profile_canvas.setMinimumHeight(300)
+
+        self.metadata_tabs = QTabWidget()
+        self.metadata_canvases = {}
+        metadata_fields = ['latlong', 'timestamp', 'abort_status', 'actuator_error', 'temperature']
+
+        for field in metadata_fields:
+            fig = Figure()
+            canvas = FigureCanvas(fig)
+            self.metadata_canvases[field] = canvas
+            tab = QWidget()
+            layout = QVBoxLayout()
+            layout.addWidget(canvas)
+            tab.setLayout(layout)
+            self.metadata_tabs.addTab(tab, field.replace('_', ' ').title())
+
+        self.metadata_tabs.currentChanged.connect(self.update_active_tab)
+
+        self.right_panel.addWidget(self.profile_canvas)
+        self.right_panel.addWidget(self.metadata_tabs)
 
         right_widget = QWidget()
         right_widget.setLayout(self.right_panel)
+        
+        # Legend panel (far right)
+        self.legend_panel = QVBoxLayout()
+        self.legend_list = QListWidget()
+        self.legend_panel.addWidget(self.legend_list)
+        legend_widget = QWidget()
+        legend_widget.setLayout(self.legend_panel)
 
         self.splitter.addWidget(left_widget)
         self.splitter.addWidget(center_widget)
         self.splitter.addWidget(right_widget)
+        self.splitter.addWidget(legend_widget)
+
 
         self.layout.addWidget(self.splitter)
         self.setLayout(self.layout)
+
+    def update_active_tab(self):
+        index = self.metadata_tabs.currentIndex()
+        self.active_metadata_tab = list(self.metadata_canvases.keys())[index]
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
