@@ -1,0 +1,31 @@
+# Ignore all files in data/ and plots/
+data/*
+plots/*
+
+# But keep the folders themselves
+!data/.gitkeep
+!plots/.gitkeep
+
+# Bytecode & cache
+__pycache__/
+*.pyc
+
+# Spyder settings
+.spyproject/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Build artifacts (if using pyinstaller)
+dist/
+build/
+*.spec
+
+# Virtual environments (if applicable)
+venv/
+.env/
+
+# Add placeholder folders
+touch data/.gitkeep
+touch plots/.gitkeep

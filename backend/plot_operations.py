@@ -14,6 +14,8 @@ def plot_data(gui):
     # Clear profile plot
     gui.profile_figure.clear()
     ax1 = gui.profile_figure.add_subplot(111)
+    ax1.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.3)
+
 
     # Clear legend list
     gui.legend_list.clear()
@@ -126,6 +128,8 @@ def plot_data(gui):
         fig = canvas.figure
         fig.clear()
         ax2 = fig.add_subplot(111)
+        ax2.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.3)
+
 
         if key == 'latlong':
             for i in range(len(latitudes)):
