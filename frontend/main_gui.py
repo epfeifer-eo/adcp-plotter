@@ -9,7 +9,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection
+from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection, export_plots
 from backend.plot_operations import plot_data
 
 class ADCPlotterGUI(QWidget):
@@ -59,6 +59,11 @@ class ADCPlotterGUI(QWidget):
         self.plot_button.clicked.connect(lambda: plot_data(self))
         self.center_panel.addWidget(self.collection_list)
         self.center_panel.addWidget(self.plot_button)
+        
+        self.export_button = QPushButton("Export Plots")
+        self.export_button.clicked.connect(lambda: export_plots(self))
+        self.center_panel.addWidget(self.export_button)
+
 
         center_widget = QWidget()
         center_widget.setLayout(self.center_panel)

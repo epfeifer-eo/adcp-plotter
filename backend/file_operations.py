@@ -58,3 +58,36 @@ def confirm_selection(gui):
             gui.parsed_data[file_name] = data
             for i, collection in enumerate(data):
                 gui.collection_list.addItem(f"{file_name} - Collection {i+1}")
+
+def export_plots(gui):
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    plots_folder = os.path.join(project_root, 'plots')
+    os.makedirs(plots_folder, exist_ok=True)
+
+    path, _ = QFileDialog.getSaveFileName(
+        gui, "Export Plot", os.path.join(plots_folder, "export.png"), "PNG Files (*.png);;PDF Files (*.pdf)"
+    )
+    if not path:
+        return
+
+    try:
+        if path.endswith(".pdf"):
+            with PdfPages(path) as pdf:
+                profile_canvas = FigureCanvasAgg(gui.profile_figure)
+                profile_canvas.draw()
+                pdf.savefig(gui.profile_figure)
+
+                for key, canvas in gui.metadata_canvases.items():
+                    metadata_canvas = FigureCanvasAgg(canvas.figure)
+                    metadata_canvas.draw()
+                    pdf.savefig(canvas.figure)
+        else:
+            gui.profile_figure.savefig(path.replace(".png", "_profile.png"))
+            for key, canvas in gui.metadata_canvases.items():
+                canvas.figure.savefig(path.replace(".png", f"_{key}.png"))
+
+    except Exception as e:
+        print(f"Export failed: {e}")
