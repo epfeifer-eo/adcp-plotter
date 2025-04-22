@@ -122,6 +122,9 @@ class ADCPlotterGUI(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
+    import qdarkstyle
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+
     try:
         gui = ADCPlotterGUI()
     except Exception as e:
