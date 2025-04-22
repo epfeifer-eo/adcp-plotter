@@ -1,5 +1,6 @@
+print("Starting ADCP Plotter...")
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter, QTabWidget, QWidget
+    QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter, QTabWidget
 )
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -11,6 +12,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection, export_plots
 from backend.plot_operations import plot_data
+
+
 
 class ADCPlotterGUI(QWidget):
     def __init__(self):
@@ -118,6 +121,12 @@ class ADCPlotterGUI(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    gui = ADCPlotterGUI()
+    
+    try:
+        gui = ADCPlotterGUI()
+    except Exception as e:
+        print(f"GUI creation failed: {e}")
+        sys.exit(1)
     gui.show()
     sys.exit(app.exec_())
+

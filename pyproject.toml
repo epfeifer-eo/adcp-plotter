@@ -1,0 +1,20 @@
+[project]
+name = "adcp-plotter"
+version = "0.1.0"
+description = "adcp plotter for json files"
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
+package-mode = false
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "PyQt5==5.15.6",
+    "matplotlib (>=3.10.1,<4.0.0)",
+    "mplcursors (>=0.6,<0.7)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
