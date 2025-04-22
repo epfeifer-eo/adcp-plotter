@@ -1,5 +1,8 @@
 import os
 from PyQt5.QtWidgets import QFileDialog
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+
 from backend.data_parsing import load_json
 
 def load_files(gui):
@@ -59,35 +62,57 @@ def confirm_selection(gui):
             for i, collection in enumerate(data):
                 gui.collection_list.addItem(f"{file_name} - Collection {i+1}")
 
-def export_plots(gui):
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    from matplotlib.backends.backend_pdf import PdfPages
-
+def export_selected(gui, options):
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    plots_folder = os.path.join(project_root, 'plots')
-    os.makedirs(plots_folder, exist_ok=True)
+    export_folder = os.path.join(project_root, 'plots')
+    os.makedirs(export_folder, exist_ok=True)
 
-    path, _ = QFileDialog.getSaveFileName(
-        gui, "Export Plot", os.path.join(plots_folder, "export.png"), "PNG Files (*.png);;PDF Files (*.pdf)"
-    )
-    if not path:
-        return
+    if options['format'] == 'pdf':
+        from PyQt5.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getSaveFileName(gui, "Export PDF", os.path.join(export_folder, "export.pdf"), "PDF Files (*.pdf)")
+        if not path:
+            return
 
-    try:
-        if path.endswith(".pdf"):
-            with PdfPages(path) as pdf:
-                profile_canvas = FigureCanvasAgg(gui.profile_figure)
-                profile_canvas.draw()
-                pdf.savefig(gui.profile_figure)
+        with PdfPages(path) as pdf:
+            canvas = FigureCanvasAgg(gui.profile_figure)
+            canvas.draw()
+            pdf.savefig(gui.profile_figure)
 
-                for key, canvas in gui.metadata_canvases.items():
-                    metadata_canvas = FigureCanvasAgg(canvas.figure)
-                    metadata_canvas.draw()
-                    pdf.savefig(canvas.figure)
-        else:
-            gui.profile_figure.savefig(path.replace(".png", "_profile.png"))
-            for key, canvas in gui.metadata_canvases.items():
-                canvas.figure.savefig(path.replace(".png", f"_{key}.png"))
+            for key in options['metadata_fields']:
+                canvas = FigureCanvasAgg(gui.metadata_canvases[key].figure)
+                canvas.draw()
+                pdf.savefig(gui.metadata_canvases[key].figure)
 
-    except Exception as e:
-        print(f"Export failed: {e}")
+            if options['include_legend']:
+                from matplotlib.figure import Figure
+                import matplotlib.pyplot as plt
+                fig = Figure(figsize=(6, len(gui.legend_list) * 0.25 + 1))
+                ax = fig.add_subplot(111)
+                ax.axis('off')
+                for i in range(gui.legend_list.count()):
+                    item = gui.legend_list.item(i)
+                    label = item.text()
+                    color = item.foreground().color().name()
+                    ax.text(0.01, 0.95 - i * 0.05, label, color=color, fontsize=10, verticalalignment='top')
+                pdf.savefig(fig)
+
+    elif options['format'] == 'png':
+        from PyQt5.QtWidgets import QInputDialog
+        name, ok = QInputDialog.getText(gui, "File Naming", "Base filename:", text="export")
+        if not ok or not name.strip():
+            name = "export"
+        gui.profile_figure.savefig(os.path.join(export_folder, f"{name}_profile.png"))
+        for key in options['metadata_fields']:
+            canvas = gui.metadata_canvases[key]
+            canvas.figure.savefig(os.path.join(export_folder, f"{name}_{key}.png"))
+        if options['include_legend']:
+            from matplotlib.figure import Figure
+            fig = Figure(figsize=(6, len(gui.legend_list) * 0.25 + 1))
+            ax = fig.add_subplot(111)
+            ax.axis('off')
+            for i in range(gui.legend_list.count()):
+                item = gui.legend_list.item(i)
+                label = item.text()
+                color = item.foreground().color().name()
+                ax.text(0.01, 1 - i * 0.14, label, color=color, fontsize=10, verticalalignment='top')
+            fig.savefig(os.path.join(export_folder, f"{name}_legend.png"))

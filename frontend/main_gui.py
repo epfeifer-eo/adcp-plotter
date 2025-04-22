@@ -1,6 +1,8 @@
 print("Starting ADCP Plotter...")
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter, QTabWidget
+    QAbstractItemView,
+    QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter, QTabWidget,
+    QRadioButton, QCheckBox, QDialog, QDialogButtonBox, QLabel, QButtonGroup
 )
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -10,10 +12,58 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection, export_plots
+from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection, export_selected
+
 from backend.plot_operations import plot_data
 
+class ExportDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Export Options")
+        self.setMinimumWidth(300)
 
+        layout = QVBoxLayout()
+
+        # Export format
+        layout.addWidget(QLabel("Export format:"))
+        self.format_group = QButtonGroup(self)
+        self.png_radio = QRadioButton("Export as PNG files")
+        self.pdf_radio = QRadioButton("Export as a combined PDF")
+        self.format_group.addButton(self.png_radio)
+        self.format_group.addButton(self.pdf_radio)
+        self.pdf_radio.setChecked(True)
+        layout.addWidget(self.png_radio)
+        layout.addWidget(self.pdf_radio)
+
+        # Metadata checkboxes
+        layout.addWidget(QLabel("Include metadata plots:"))
+        self.checkboxes = {}
+        fields = ['latlong', 'timestamp', 'abort_status', 'actuator_error', 'temperature']
+        for field in fields:
+            checkbox = QCheckBox(field.replace('_', ' ').title())
+            checkbox.setChecked(True)
+            self.checkboxes[field] = checkbox
+            layout.addWidget(checkbox)
+
+        # Legend option
+        self.include_legend_checkbox = QCheckBox("Include legend")
+        self.include_legend_checkbox.setChecked(True)
+        layout.addWidget(self.include_legend_checkbox)
+
+        # OK / Cancel buttons
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+
+        self.setLayout(layout)
+
+    def get_options(self):
+        return {
+            'format': 'pdf' if self.pdf_radio.isChecked() else 'png',
+            'metadata_fields': [key for key, cb in self.checkboxes.items() if cb.isChecked()],
+            'include_legend': self.include_legend_checkbox.isChecked()
+        }
 
 class ADCPlotterGUI(QWidget):
     def __init__(self):
@@ -23,7 +73,7 @@ class ADCPlotterGUI(QWidget):
         self.file_paths = {}
         self.parsed_data = {}
         self.metadata_keys_to_plot = []
-        self.active_metadata_tab = 'latlong'  # default tab
+        self.active_metadata_tab = 'latlong'
 
         self.layout = QHBoxLayout()
         self.splitter = QSplitter(Qt.Horizontal)
@@ -57,16 +107,15 @@ class ADCPlotterGUI(QWidget):
         # Center panel
         self.center_panel = QVBoxLayout()
         self.collection_list = QListWidget()
-        self.collection_list.setSelectionMode(QListWidget.MultiSelection)
+        self.collection_list.setSelectionMode(QAbstractItemView.MultiSelection)
         self.plot_button = QPushButton("Plot Selected Data")
         self.plot_button.clicked.connect(lambda: plot_data(self))
         self.center_panel.addWidget(self.collection_list)
         self.center_panel.addWidget(self.plot_button)
-        
-        self.export_button = QPushButton("Export Plots")
-        self.export_button.clicked.connect(lambda: export_plots(self))
-        self.center_panel.addWidget(self.export_button)
 
+        self.export_button = QPushButton("Export")
+        self.export_button.clicked.connect(self.show_export_dialog)
+        self.center_panel.addWidget(self.export_button)
 
         center_widget = QWidget()
         center_widget.setLayout(self.center_panel)
@@ -98,8 +147,8 @@ class ADCPlotterGUI(QWidget):
 
         right_widget = QWidget()
         right_widget.setLayout(self.right_panel)
-        
-        # Legend panel (far right)
+
+        # Legend panel
         self.legend_panel = QVBoxLayout()
         self.legend_list = QListWidget()
         self.legend_panel.addWidget(self.legend_list)
@@ -111,7 +160,6 @@ class ADCPlotterGUI(QWidget):
         self.splitter.addWidget(right_widget)
         self.splitter.addWidget(legend_widget)
 
-
         self.layout.addWidget(self.splitter)
         self.setLayout(self.layout)
 
@@ -119,9 +167,19 @@ class ADCPlotterGUI(QWidget):
         index = self.metadata_tabs.currentIndex()
         self.active_metadata_tab = list(self.metadata_canvases.keys())[index]
 
+    def show_export_dialog(self):
+        dialog = ExportDialog(self)
+        if dialog.exec_():
+            options = dialog.get_options()
+            print("User selected export options:", options)
+            from backend.file_operations import export_selected
+            export_selected(self, options)
+
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
+
     import qdarkstyle
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 
@@ -132,4 +190,3 @@ if __name__ == "__main__":
         sys.exit(1)
     gui.show()
     sys.exit(app.exec_())
-
