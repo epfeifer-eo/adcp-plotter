@@ -3,6 +3,7 @@ from matplotlib.figure import Figure
 from datetime import datetime
 import matplotlib.dates as mdates
 import os
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QFont
 from PyQt5.QtWidgets import QListWidgetItem
 
@@ -61,10 +62,16 @@ def plot_data(gui):
             colors.append(color)
 
             # Add to scrollable legend
-            item = QListWidgetItem(label)
-            item.setForeground(QBrush(QColor(color)))
-            item.setFont(QFont("Courier", 9))
-            gui.legend_list.addItem(item)
+            legend_item = QListWidgetItem(label)
+            legend_item.setForeground(QBrush(QColor(color)))
+            legend_item.setFont(QFont("Courier", 9))
+            legend_item.setData(Qt.UserRole, {
+                "file": file_name,
+                "collection": f"Collection {collection_number + 1}",
+                "color": color
+            })
+            gui.legend_list.addItem(legend_item)
+
 
             try:
                 dt = datetime(

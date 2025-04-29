@@ -1,4 +1,12 @@
-print("Starting ADCP Plotter...")
+
+import sys
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.abspath(os.path.join(current_dir, '..'))
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
+
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter, QTabWidget,
@@ -7,10 +15,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection, export_selected
 
@@ -188,5 +192,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"GUI creation failed: {e}")
         sys.exit(1)
-    gui.show()
+    gui.showMaximized()
     sys.exit(app.exec_())

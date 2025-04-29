@@ -1,13 +1,19 @@
 import os
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QFileDialog, QInputDialog
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+import matplotlib.pyplot as plt
 
 from backend.data_parsing import load_json
 
 def load_files(gui):
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     data_folder = os.path.join(project_root, 'data')
+
+
+    os.makedirs(data_folder, exist_ok=True)
+
     files, _ = QFileDialog.getOpenFileNames(gui, "Select Files", data_folder, "JSON Files (*.json)")
     if files:
         for file in files:
@@ -67,37 +73,94 @@ def export_selected(gui, options):
     export_folder = os.path.join(project_root, 'plots')
     os.makedirs(export_folder, exist_ok=True)
 
+    def export_legend_figure(filepath):
+        grouped = {}
+        for i in range(gui.legend_list.count()):
+            item = gui.legend_list.item(i)
+            info = item.data(Qt.UserRole)
+    
+            if not info or "file" not in info or "collection" not in info:
+                continue
+    
+            file_part = info["file"]
+            display_label = info["collection"]
+            color = info["color"]
+    
+            grouped.setdefault(file_part, []).append((display_label, color))
+    
+        total_lines = sum(len(v) + 1 for v in grouped.values())
+        fig_height = max(2, total_lines * 0.25)
+        fig, ax = plt.subplots(figsize=(6, fig_height))
+        ax.axis('off')
+    
+        y = 1.0
+        spacing = 0.06
+    
+        for group, entries in grouped.items():
+            ax.text(0.01, y, group, fontsize=11, fontweight='bold', verticalalignment='top')
+            y -= spacing
+            for entry, color in entries:
+                ax.text(0.05, y, entry, color=color, fontsize=10, verticalalignment='top')
+                y -= spacing
+    
+        fig.tight_layout()
+        fig.savefig(filepath)
+        plt.close(fig)
+
+
+
     if options['format'] == 'pdf':
-        from PyQt5.QtWidgets import QFileDialog
         path, _ = QFileDialog.getSaveFileName(gui, "Export PDF", os.path.join(export_folder, "export.pdf"), "PDF Files (*.pdf)")
         if not path:
             return
-
+    
         with PdfPages(path) as pdf:
             canvas = FigureCanvasAgg(gui.profile_figure)
             canvas.draw()
             pdf.savefig(gui.profile_figure)
-
+    
             for key in options['metadata_fields']:
                 canvas = FigureCanvasAgg(gui.metadata_canvases[key].figure)
                 canvas.draw()
                 pdf.savefig(gui.metadata_canvases[key].figure)
-
+    
             if options['include_legend']:
-                from matplotlib.figure import Figure
-                import matplotlib.pyplot as plt
-                fig = Figure(figsize=(6, len(gui.legend_list) * 0.25 + 1))
-                ax = fig.add_subplot(111)
-                ax.axis('off')
+                grouped = {}
                 for i in range(gui.legend_list.count()):
                     item = gui.legend_list.item(i)
-                    label = item.text()
-                    color = item.foreground().color().name()
-                    ax.text(0.01, 0.95 - i * 0.05, label, color=color, fontsize=10, verticalalignment='top')
+                    info = item.data(Qt.UserRole)
+            
+                    if not info or "file" not in info or "collection" not in info:
+                        continue
+            
+                    file_part = info["file"]
+                    display_label = info["collection"]
+                    color = info["color"]
+            
+                    grouped.setdefault(file_part, []).append((display_label, color))
+            
+                total_lines = sum(len(v) + 1 for v in grouped.values())  # +1 for each group header
+                fig_height = max(2, total_lines * 0.25)
+                fig, ax = plt.subplots(figsize=(6, fig_height))
+                ax.axis('off')
+            
+                y = 1.0
+                spacing = 0.06
+            
+                for group, entries in grouped.items():
+                    ax.text(0.01, y, group, fontsize=11, fontweight='bold', verticalalignment='top')
+                    y -= spacing
+                    for entry, color in entries:
+                        ax.text(0.05, y, entry, color=color, fontsize=10, verticalalignment='top')
+                        y -= spacing
+            
+                fig.tight_layout()
                 pdf.savefig(fig)
+                plt.close(fig)
+
+
 
     elif options['format'] == 'png':
-        from PyQt5.QtWidgets import QInputDialog
         name, ok = QInputDialog.getText(gui, "File Naming", "Base filename:", text="export")
         if not ok or not name.strip():
             name = "export"
@@ -106,13 +169,35 @@ def export_selected(gui, options):
             canvas = gui.metadata_canvases[key]
             canvas.figure.savefig(os.path.join(export_folder, f"{name}_{key}.png"))
         if options['include_legend']:
-            from matplotlib.figure import Figure
-            fig = Figure(figsize=(6, len(gui.legend_list) * 0.25 + 1))
-            ax = fig.add_subplot(111)
-            ax.axis('off')
+            grouped = {}
             for i in range(gui.legend_list.count()):
                 item = gui.legend_list.item(i)
-                label = item.text()
-                color = item.foreground().color().name()
-                ax.text(0.01, 1 - i * 0.14, label, color=color, fontsize=10, verticalalignment='top')
+                info = item.data(Qt.UserRole)
+        
+                if not info or "file" not in info or "collection" not in info:
+                    continue  # skip any broken or non-standard items
+        
+                file_part = info["file"]
+                display_label = info["collection"]
+                color = info["color"]
+        
+                grouped.setdefault(file_part, []).append((display_label, color))
+        
+            total_lines = sum(len(v) + 1 for v in grouped.values())  # +1 for each group header
+            fig_height = max(2, total_lines * 0.25)
+            fig, ax = plt.subplots(figsize=(6, fig_height))
+            ax.axis('off')
+        
+            y = 1.0
+            spacing = 0.06
+        
+            for group, entries in grouped.items():
+                ax.text(0.01, y, group, fontsize=11, fontweight='bold', verticalalignment='top')
+                y -= spacing
+                for entry, color in entries:
+                    ax.text(0.05, y, entry, color=color, fontsize=10, verticalalignment='top')
+                    y -= spacing
+        
+            fig.tight_layout()
             fig.savefig(os.path.join(export_folder, f"{name}_legend.png"))
+            plt.close(fig)
