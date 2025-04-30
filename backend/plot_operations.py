@@ -104,12 +104,15 @@ def plot_data(gui):
 
     def handle_legend_click(item):
         clicked_label = item.text()
+    
+        # Toggle highlighting
         if gui.highlighted_label == clicked_label:
-            # Unhighlight all
             for line in gui.profile_lines:
                 line.set_linewidth(1.5)
                 line.set_alpha(1.0)
             gui.highlighted_label = None
+            gui.metadata_display.clear()
+            return
         else:
             for line in gui.profile_lines:
                 if line.get_label() == clicked_label:
@@ -119,7 +122,29 @@ def plot_data(gui):
                     line.set_linewidth(1.0)
                     line.set_alpha(0.3)
             gui.highlighted_label = clicked_label
+    
         gui.profile_canvas.draw()
+    
+        # 🔍 Display metadata for the selected collection
+        info = item.data(Qt.UserRole)
+        if not info:
+            gui.metadata_display.setText("No metadata available.")
+            return
+    
+        file = info.get("file")
+        try:
+            index = int(info.get("collection").split()[-1]) - 1
+            metadata = gui.parsed_data[file][index].get("metadata", {})
+        except Exception:
+            gui.metadata_display.setText("Metadata not found.")
+            return
+    
+        if not metadata:
+            gui.metadata_display.setText("No metadata found.")
+        else:
+            lines = [f"{key}: {value}" for key, value in metadata.items()]
+            gui.metadata_display.setText("\n".join(lines))
+    
 
     try:
         gui.legend_list.itemClicked.disconnect()

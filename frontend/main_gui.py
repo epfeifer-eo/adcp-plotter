@@ -153,11 +153,26 @@ class ADCPlotterGUI(QWidget):
         right_widget.setLayout(self.right_panel)
 
         # Legend panel
-        self.legend_panel = QVBoxLayout()
+        # Split legend + metadata details vertically
+        self.legend_splitter = QSplitter(Qt.Vertical)
+        
+        # Top: Legend list
         self.legend_list = QListWidget()
-        self.legend_panel.addWidget(self.legend_list)
+        self.legend_list.setMinimumHeight(100)
+        self.legend_splitter.addWidget(self.legend_list)
+        
+        # Bottom: Metadata display
+        from PyQt5.QtWidgets import QTextEdit
+        self.metadata_display = QTextEdit()
+        self.metadata_display.setReadOnly(True)
+        self.metadata_display.setPlaceholderText("Select a collection to view metadata...")
+        self.legend_splitter.addWidget(self.metadata_display)
+        
+        # Final layout
         legend_widget = QWidget()
-        legend_widget.setLayout(self.legend_panel)
+        legend_layout = QVBoxLayout()
+        legend_layout.addWidget(self.legend_splitter)
+        legend_widget.setLayout(legend_layout)
 
         self.splitter.addWidget(left_widget)
         self.splitter.addWidget(center_widget)
