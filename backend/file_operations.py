@@ -1,4 +1,5 @@
 import os
+import sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog, QInputDialog
 from matplotlib.backends.backend_pdf import PdfPages
@@ -7,9 +8,17 @@ import matplotlib.pyplot as plt
 
 from backend.data_parsing import load_json
 
+def get_base_dir():
+    if getattr(sys, 'frozen', False):
+        # Running as.exe
+        return os.path.dirname(sys.executable)
+    else:
+        # Running from source
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 def load_files(gui):
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    data_folder = os.path.join(project_root, 'data')
+    base_dir = get_base_dir()
+    data_folder = os.path.join(base_dir, 'data')
 
 
     os.makedirs(data_folder, exist_ok=True)
@@ -69,8 +78,8 @@ def confirm_selection(gui):
                 gui.collection_list.addItem(f"{file_name} - Collection {i+1}")
 
 def export_selected(gui, options):
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    export_folder = os.path.join(project_root, 'plots')
+    base_dir = get_base_dir()
+    export_folder = os.path.join(base_dir, 'plots')
     os.makedirs(export_folder, exist_ok=True)
 
     def export_legend_figure(filepath):
