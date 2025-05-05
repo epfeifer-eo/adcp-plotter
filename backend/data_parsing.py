@@ -22,3 +22,4 @@ def load_json(filepath):
     except Exception as e:
         print(f"Error loading JSON file {filepath}: {e}")
         return None
+# This is where I will put the .adcp file handling and metadata parsing when/if I get to it

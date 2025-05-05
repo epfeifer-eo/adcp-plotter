@@ -1,24 +1,24 @@
-
 import sys
 import os
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.abspath(os.path.join(current_dir, '..'))
-if root_dir not in sys.path:
-    sys.path.insert(0, root_dir)
-
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QApplication, QWidget, QVBoxLayout, QPushButton, QListWidget, QHBoxLayout, QSplitter, QTabWidget,
-    QRadioButton, QCheckBox, QDialog, QDialogButtonBox, QLabel, QButtonGroup
+    QRadioButton, QCheckBox, QDialog, QDialogButtonBox, QLabel, QButtonGroup, QTextEdit
 )
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection, export_selected
-
 from backend.plot_operations import plot_data
+
+
+def get_base_dir():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 
 class ExportDialog(QDialog):
     def __init__(self, parent=None):
@@ -28,7 +28,7 @@ class ExportDialog(QDialog):
 
         layout = QVBoxLayout()
 
-        # Export format
+        # Export format selection
         layout.addWidget(QLabel("Export format:"))
         self.format_group = QButtonGroup(self)
         self.png_radio = QRadioButton("Export as PNG files")
@@ -39,7 +39,7 @@ class ExportDialog(QDialog):
         layout.addWidget(self.png_radio)
         layout.addWidget(self.pdf_radio)
 
-        # Metadata checkboxes
+        # Metadata field checkboxes
         layout.addWidget(QLabel("Include metadata plots:"))
         self.checkboxes = {}
         fields = ['latlong', 'timestamp', 'abort_status', 'actuator_error', 'temperature']
@@ -49,12 +49,12 @@ class ExportDialog(QDialog):
             self.checkboxes[field] = checkbox
             layout.addWidget(checkbox)
 
-        # Legend option
+        # Legend checkbox
         self.include_legend_checkbox = QCheckBox("Include legend")
         self.include_legend_checkbox.setChecked(True)
         layout.addWidget(self.include_legend_checkbox)
 
-        # OK / Cancel buttons
+        # Dialog buttons
         self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
@@ -69,11 +69,24 @@ class ExportDialog(QDialog):
             'include_legend': self.include_legend_checkbox.isChecked()
         }
 
+
 class ADCPlotterGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ADCP Plotter")
         self.setGeometry(100, 100, 1200, 700)
+
+        # Set custom icon
+        if getattr(sys, 'frozen', False):
+            base_dir = sys._MEIPASS  # special PyInstaller path
+        else:
+            base_dir = os.path.abspath(os.path.dirname(__file__))
+        
+        icon_path = os.path.join(base_dir, "adcp_icon.ico")
+        self.setWindowIcon(QIcon(icon_path))
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
         self.file_paths = {}
         self.parsed_data = {}
         self.metadata_keys_to_plot = []
@@ -82,7 +95,7 @@ class ADCPlotterGUI(QWidget):
         self.layout = QHBoxLayout()
         self.splitter = QSplitter(Qt.Horizontal)
 
-        # Left panel
+        # Left panel: file controls
         self.left_panel = QVBoxLayout()
         self.load_btn = QPushButton("Load Files")
         self.load_btn.clicked.connect(lambda: load_files(self))
@@ -108,23 +121,23 @@ class ADCPlotterGUI(QWidget):
         left_widget = QWidget()
         left_widget.setLayout(self.left_panel)
 
-        # Center panel
+        # Center panel: collection and plot controls
         self.center_panel = QVBoxLayout()
         self.collection_list = QListWidget()
         self.collection_list.setSelectionMode(QAbstractItemView.MultiSelection)
         self.plot_button = QPushButton("Plot Selected Data")
         self.plot_button.clicked.connect(lambda: plot_data(self))
-        self.center_panel.addWidget(self.collection_list)
-        self.center_panel.addWidget(self.plot_button)
-
         self.export_button = QPushButton("Export")
         self.export_button.clicked.connect(self.show_export_dialog)
+
+        self.center_panel.addWidget(self.collection_list)
+        self.center_panel.addWidget(self.plot_button)
         self.center_panel.addWidget(self.export_button)
 
         center_widget = QWidget()
         center_widget.setLayout(self.center_panel)
 
-        # Right panel
+        # Right panel: profile plot and metadata tabs
         self.right_panel = QVBoxLayout()
         self.profile_figure = Figure(constrained_layout=True)
         self.profile_canvas = FigureCanvas(self.profile_figure)
@@ -152,28 +165,23 @@ class ADCPlotterGUI(QWidget):
         right_widget = QWidget()
         right_widget.setLayout(self.right_panel)
 
-        # Legend panel
-        # Split legend + metadata details vertically
+        # Legend panel: scrollable list + metadata viewer
         self.legend_splitter = QSplitter(Qt.Vertical)
-        
-        # Top: Legend list
         self.legend_list = QListWidget()
         self.legend_list.setMinimumHeight(100)
         self.legend_splitter.addWidget(self.legend_list)
-        
-        # Bottom: Metadata display
-        from PyQt5.QtWidgets import QTextEdit
+
         self.metadata_display = QTextEdit()
         self.metadata_display.setReadOnly(True)
         self.metadata_display.setPlaceholderText("Select a collection to view metadata...")
         self.legend_splitter.addWidget(self.metadata_display)
-        
-        # Final layout
+
         legend_widget = QWidget()
         legend_layout = QVBoxLayout()
         legend_layout.addWidget(self.legend_splitter)
         legend_widget.setLayout(legend_layout)
 
+        # Combine all panels
         self.splitter.addWidget(left_widget)
         self.splitter.addWidget(center_widget)
         self.splitter.addWidget(right_widget)
@@ -195,7 +203,6 @@ class ADCPlotterGUI(QWidget):
             export_selected(self, options)
 
 
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
@@ -207,5 +214,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"GUI creation failed: {e}")
         sys.exit(1)
+
     gui.showMaximized()
     sys.exit(app.exec_())
