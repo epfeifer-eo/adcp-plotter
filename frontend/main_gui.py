@@ -126,7 +126,7 @@ class ADCPlotterGUI(QWidget):
 
         # Right panel
         self.right_panel = QVBoxLayout()
-        self.profile_figure = Figure()
+        self.profile_figure = Figure(constrained_layout=True)
         self.profile_canvas = FigureCanvas(self.profile_figure)
         self.profile_canvas.setMinimumHeight(300)
 
@@ -135,7 +135,7 @@ class ADCPlotterGUI(QWidget):
         metadata_fields = ['latlong', 'timestamp', 'abort_status', 'actuator_error', 'temperature']
 
         for field in metadata_fields:
-            fig = Figure()
+            fig = Figure(constrained_layout=True)
             canvas = FigureCanvas(fig)
             self.metadata_canvases[field] = canvas
             tab = QWidget()

@@ -17,19 +17,12 @@ def plot_data(gui):
     ax1 = gui.profile_figure.add_subplot(111)
     ax1.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.3)
 
-
-    # Clear legend list
     gui.legend_list.clear()
 
-    # Shared metadata info for all tabs
-    timestamps = []
-    latitudes = []
-    longitudes = []
-    abort_statuses = []
-    actuator_errors = []
-    temperatures = []
-    colors = []
-    labels = []
+    # Shared metadata info
+    timestamps, latitudes, longitudes = [], [], []
+    abort_statuses, actuator_errors, temperatures = [], [], []
+    colors, labels = [], []
 
     for item in selected_items:
         selected_collection = item.text()
@@ -42,12 +35,8 @@ def plot_data(gui):
                 continue
 
             collection = data[collection_number]
-            if 'measurements' in collection:
-                collection_data = collection['measurements']
-                metadata = collection.get('metadata', {})
-            else:
-                collection_data = collection.get('data') or []
-                metadata = collection.get('metadata') or {k: v for k, v in collection.items() if k != 'data'}
+            collection_data = collection.get('measurements') or collection.get('data') or []
+            metadata = collection.get('metadata') or {k: v for k, v in collection.items() if k != 'data'}
 
             depths = [point['depth'] for point in collection_data]
             values = [point['value'] for point in collection_data]
@@ -61,7 +50,6 @@ def plot_data(gui):
             labels.append(label)
             colors.append(color)
 
-            # Add to scrollable legend
             legend_item = QListWidgetItem(label)
             legend_item.setForeground(QBrush(QColor(color)))
             legend_item.setFont(QFont("Courier", 9))
@@ -71,7 +59,6 @@ def plot_data(gui):
                 "color": color
             })
             gui.legend_list.addItem(legend_item)
-
 
             try:
                 dt = datetime(
@@ -104,33 +91,30 @@ def plot_data(gui):
 
     def handle_legend_click(item):
         clicked_label = item.text()
-    
-        # Toggle highlighting
-        if gui.highlighted_label == clicked_label:
-            for line in gui.profile_lines:
-                line.set_linewidth(1.5)
+        is_same = (gui.highlighted_label == clicked_label)
+
+        # Adjust plot line styles
+        for line in gui.profile_lines:
+            if line.get_label() == clicked_label:
+                line.set_linewidth(1.5 if is_same else 3.0)
                 line.set_alpha(1.0)
-            gui.highlighted_label = None
+            else:
+                line.set_linewidth(1.0)
+                line.set_alpha(1.0 if is_same else 0.3)
+
+        gui.highlighted_label = None if is_same else clicked_label
+        gui.profile_canvas.draw()
+
+        # Update metadata panel
+        if is_same:
             gui.metadata_display.clear()
             return
-        else:
-            for line in gui.profile_lines:
-                if line.get_label() == clicked_label:
-                    line.set_linewidth(3.0)
-                    line.set_alpha(1.0)
-                else:
-                    line.set_linewidth(1.0)
-                    line.set_alpha(0.3)
-            gui.highlighted_label = clicked_label
-    
-        gui.profile_canvas.draw()
-    
-        # 🔍 Display metadata for the selected collection
+
         info = item.data(Qt.UserRole)
         if not info:
             gui.metadata_display.setText("No metadata available.")
             return
-    
+
         file = info.get("file")
         try:
             index = int(info.get("collection").split()[-1]) - 1
@@ -138,13 +122,13 @@ def plot_data(gui):
         except Exception:
             gui.metadata_display.setText("Metadata not found.")
             return
-    
+
         if not metadata:
             gui.metadata_display.setText("No metadata found.")
         else:
             lines = [f"{key}: {value}" for key, value in metadata.items()]
             gui.metadata_display.setText("\n".join(lines))
-    
+
 
     try:
         gui.legend_list.itemClicked.disconnect()
@@ -152,16 +136,15 @@ def plot_data(gui):
         pass
     gui.legend_list.itemClicked.connect(handle_legend_click)
 
-    ax1.legend(loc='center left', bbox_to_anchor=(1.2, 0.5), borderaxespad=0., frameon=True, fontsize='small')
+    #ax1.legend(loc='center left', bbox_to_anchor=(1.2, 0.5), borderaxespad=0., frameon=True, fontsize='small')
     gui.profile_canvas.draw()
 
-    # Plot all metadata tabs
+    # Plot all metadata tabs 
     for key, canvas in gui.metadata_canvases.items():
         fig = canvas.figure
         fig.clear()
         ax2 = fig.add_subplot(111)
         ax2.grid(True, which='major', linestyle='--', linewidth=0.5, alpha=0.3)
-
 
         if key == 'latlong':
             for i in range(len(latitudes)):
@@ -202,6 +185,5 @@ def plot_data(gui):
             ax2.set_title("Internal Temperature")
             ax2.set_xticks(range(len(labels)))
             ax2.set_xticklabels(labels, rotation=45, ha='right')
-
-        fig.tight_layout()
+        
         canvas.draw()
