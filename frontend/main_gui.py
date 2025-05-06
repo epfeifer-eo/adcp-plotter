@@ -1,5 +1,15 @@
 import sys
 import os
+
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
+backend_path = os.path.abspath(os.path.join(base_path, '..', 'backend'))
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QAbstractItemView,
@@ -9,15 +19,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-
-if getattr(sys, 'frozen', False):
-    base_path = sys._MEIPASS
-else:
-    base_path = os.path.dirname(os.path.abspath(__file__))
-
-backend_path = os.path.join(base_path, '..', 'backend')
-if backend_path not in sys.path:
-    sys.path.insert(0, backend_path)
 
 
 from backend.file_operations import load_files, clear_selection, select_all, select_none, confirm_selection, export_selected
